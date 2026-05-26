@@ -552,7 +552,7 @@
     <h3>Live Agent Fabric Pipeline — click the Broker node to inspect its script</h3>
 
     <!-- SVG DAG — top-down -->
-    <svg id="graph-svg" viewBox="0 0 740 680" xmlns="http://www.w3.org/2000/svg">
+    <svg id="graph-svg" viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <!-- Arrow markers -->
         <marker id="arrow-grey"   markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
@@ -574,129 +574,129 @@
       </defs>
 
       <!-- Grid background -->
-      <rect width="740" height="680" fill="url(#grid)"/>
+      <rect width="1000" height="700" fill="url(#grid)"/>
 
       <!-- ── EDGES (drawn before nodes so nodes sit on top) ── -->
 
       <!-- Trigger → Ingress -->
-      <line id="e-trig-ing" class="edge" x1="370" y1="66" x2="370" y2="118"/>
+      <line id="e-trig-ing" class="edge" x1="500" y1="86" x2="500" y2="118"/>
 
       <!-- Ingress → Broker -->
-      <line id="e-ing-brok" class="edge" x1="370" y1="174" x2="370" y2="226"/>
+      <line id="e-ing-brok" class="edge" x1="500" y1="174" x2="500" y2="226"/>
 
-      <!-- Broker → MCP Salesforce Query (left) -->
-      <path id="e-brok-sfq" class="edge" d="M 285 264 C 220 264 180 310 180 340"/>
+      <!-- Broker → MCP Salesforce Query (far left) -->
+      <path id="e-brok-sfq" class="edge" d="M 395 264 C 260 264 120 310 120 340"/>
 
       <!-- Broker → OpenAI LLM (center-left) -->
-      <path id="e-brok-llm" class="edge" d="M 340 282 C 310 310 295 330 280 360"/>
+      <path id="e-brok-llm" class="edge" d="M 460 282 C 420 305 375 325 310 340"/>
 
       <!-- Broker → A2A Agentforce (center) -->
-      <line id="e-brok-a2a" class="edge" x1="370" y1="282" x2="370" y2="360"/>
+      <line id="e-brok-a2a" class="edge" x1="500" y1="282" x2="500" y2="340"/>
 
-      <!-- Broker → A2A Claude (right) -->
-      <path id="e-brok-cla" class="edge" d="M 400 282 C 430 310 450 330 460 360"/>
+      <!-- Broker → A2A Claude (center-right) -->
+      <path id="e-brok-cla" class="edge" d="M 540 282 C 580 305 625 325 690 340"/>
 
       <!-- Broker → MCP Salesforce Update (far right) -->
-      <path id="e-brok-sfu" class="edge" d="M 455 264 C 540 264 560 310 560 340"/>
+      <path id="e-brok-sfu" class="edge" d="M 605 264 C 740 264 880 310 880 340"/>
 
-      <!-- Return paths (dashed) up from sub-agents to broker level -->
-      <path id="e-sfq-brok" class="edge return" d="M 180 396 C 180 440 280 460 370 460"/>
-      <path id="e-llm-brok" class="edge return" d="M 280 416 C 280 450 330 460 370 460"/>
-      <path id="e-a2a-brok" class="edge return" d="M 370 416 L 370 460"/>
-      <path id="e-cla-brok" class="edge return" d="M 460 416 C 460 450 410 460 370 460"/>
-      <path id="e-sfu-brok" class="edge return" d="M 560 396 C 560 450 460 460 370 460"/>
+      <!-- Return paths (dashed) up from sub-agents to convergence point -->
+      <path id="e-sfq-brok" class="edge return" d="M 120 396 C 120 440 350 460 500 460"/>
+      <path id="e-llm-brok" class="edge return" d="M 310 396 C 310 440 430 460 500 460"/>
+      <path id="e-a2a-brok" class="edge return" d="M 500 396 L 500 460"/>
+      <path id="e-cla-brok" class="edge return" d="M 690 396 C 690 440 570 460 500 460"/>
+      <path id="e-sfu-brok" class="edge return" d="M 880 396 C 880 440 650 460 500 460"/>
 
       <!-- Convergence → Egress -->
-      <line id="e-conv-eg" class="edge" x1="370" y1="460" x2="370" y2="510"/>
+      <line id="e-conv-eg" class="edge" x1="500" y1="460" x2="500" y2="510"/>
 
       <!-- Egress → Salesforce (response) -->
-      <line id="e-eg-sf" class="edge" x1="370" y1="566" x2="370" y2="618"/>
+      <line id="e-eg-sf" class="edge" x1="500" y1="566" x2="500" y2="618"/>
 
       <!-- ── NODES ── -->
 
       <!-- 1. Trigger / Request -->
       <g id="n-trigger" class="gnode">
-        <rect class="node-rect" x="290" y="30" width="160" height="56"/>
-        <text class="node-icon" x="330" y="58">🚀</text>
-        <text class="node-label" x="380" y="52">Sales Rep Request</text>
-        <text class="node-sub"   x="380" y="68">CRM Trigger Event</text>
+        <rect class="node-rect" x="420" y="30" width="160" height="56"/>
+        <text class="node-icon" x="460" y="58">🚀</text>
+        <text class="node-label" x="516" y="52">Sales Rep Request</text>
+        <text class="node-sub"   x="516" y="68">CRM Trigger Event</text>
       </g>
 
       <!-- 2. Ingress -->
       <g id="n-ingress" class="gnode">
-        <rect class="node-rect" x="310" y="118" width="120" height="56"/>
-        <text class="node-icon" x="342" y="146">📥</text>
-        <text class="node-label" x="386" y="140">Ingress</text>
-        <text class="node-sub"   x="386" y="156">Auth · Rate Limit</text>
+        <rect class="node-rect" x="440" y="118" width="120" height="56"/>
+        <text class="node-icon" x="472" y="146">📥</text>
+        <text class="node-label" x="516" y="140">Ingress</text>
+        <text class="node-sub"   x="516" y="156">Auth · Rate Limit</text>
       </g>
 
       <!-- 3. Agent Broker (clickable) -->
       <g id="n-broker" class="gnode clickable" onclick="openModal()">
-        <rect class="node-rect broker-rect" x="265" y="226" width="210" height="56"/>
-        <text class="node-icon" x="305" y="254">🤖</text>
-        <text class="node-label" x="390" y="248">Agent Broker</text>
-        <text class="node-sub"   x="390" y="264">Orchestration Engine</text>
-        <text class="click-hint" x="390" y="278">⬡ click to inspect script</text>
+        <rect class="node-rect broker-rect" x="395" y="226" width="210" height="56"/>
+        <text class="node-icon" x="435" y="254">🤖</text>
+        <text class="node-label" x="520" y="248">Agent Broker</text>
+        <text class="node-sub"   x="520" y="264">Orchestration Engine</text>
+        <text class="click-hint" x="520" y="278">⬡ click to inspect script</text>
       </g>
 
-      <!-- 4a. MCP-Salesforce Query (left) -->
+      <!-- 4a. MCP-Salesforce Query (far left) -->
       <g id="n-sfq" class="gnode">
-        <rect class="node-rect" x="100" y="340" width="160" height="56"/>
-        <text class="node-icon" x="140" y="368">🔍</text>
-        <text class="node-label" x="196" y="362">MCP-Salesforce</text>
-        <text class="node-sub"   x="196" y="378">Query Objects</text>
+        <rect class="node-rect" x="40" y="340" width="160" height="56"/>
+        <text class="node-icon" x="80" y="368">🔍</text>
+        <text class="node-label" x="136" y="362">MCP-Salesforce</text>
+        <text class="node-sub"   x="136" y="378">Query Objects</text>
       </g>
 
       <!-- 4b. OpenAI LLM -->
       <g id="n-llm" class="gnode">
-        <rect class="node-rect" x="200" y="360" width="160" height="56"/>
-        <text class="node-icon" x="240" y="388">🧠</text>
-        <text class="node-label" x="296" y="382">OpenAI LLM</text>
-        <text class="node-sub"   x="296" y="398">Reasoning Loop</text>
+        <rect class="node-rect" x="230" y="340" width="160" height="56"/>
+        <text class="node-icon" x="270" y="368">🧠</text>
+        <text class="node-label" x="326" y="362">OpenAI LLM</text>
+        <text class="node-sub"   x="326" y="378">Reasoning Loop</text>
       </g>
 
       <!-- 4c. A2A Agentforce -->
       <g id="n-a2a" class="gnode">
-        <rect class="node-rect" x="290" y="360" width="160" height="56"/>
-        <text class="node-icon" x="330" y="388">☁️</text>
-        <text class="node-label" x="386" y="382">A2A Agentforce</text>
-        <text class="node-sub"   x="386" y="398">Sub-agents</text>
+        <rect class="node-rect" x="420" y="340" width="160" height="56"/>
+        <text class="node-icon" x="460" y="368">☁️</text>
+        <text class="node-label" x="516" y="362">A2A Agentforce</text>
+        <text class="node-sub"   x="516" y="378">Sub-agents</text>
       </g>
 
       <!-- 4d. A2A Claude -->
       <g id="n-claude" class="gnode">
-        <rect class="node-rect" x="380" y="360" width="160" height="56"/>
-        <text class="node-icon" x="420" y="388">🔮</text>
-        <text class="node-label" x="476" y="382">A2A Claude Agent</text>
-        <text class="node-sub"   x="476" y="398">Policy Check</text>
+        <rect class="node-rect" x="610" y="340" width="160" height="56"/>
+        <text class="node-icon" x="650" y="368">🔮</text>
+        <text class="node-label" x="706" y="362">A2A Claude Agent</text>
+        <text class="node-sub"   x="706" y="378">Policy Check</text>
       </g>
 
-      <!-- 4e. MCP-Salesforce Update (right) -->
+      <!-- 4e. MCP-Salesforce Update (far right) -->
       <g id="n-sfu" class="gnode">
-        <rect class="node-rect" x="480" y="340" width="160" height="56"/>
-        <text class="node-icon" x="520" y="368">📝</text>
-        <text class="node-label" x="576" y="362">MCP-Salesforce</text>
-        <text class="node-sub"   x="576" y="378">Update Objects</text>
+        <rect class="node-rect" x="800" y="340" width="160" height="56"/>
+        <text class="node-icon" x="840" y="368">📝</text>
+        <text class="node-label" x="896" y="362">MCP-Salesforce</text>
+        <text class="node-sub"   x="896" y="378">Update Objects</text>
       </g>
 
       <!-- 5. Egress -->
       <g id="n-egress" class="gnode">
-        <rect class="node-rect" x="310" y="510" width="120" height="56"/>
-        <text class="node-icon" x="342" y="538">📤</text>
-        <text class="node-label" x="386" y="532">Egress</text>
-        <text class="node-sub"   x="386" y="548">Format · Notify</text>
+        <rect class="node-rect" x="440" y="510" width="120" height="56"/>
+        <text class="node-icon" x="472" y="538">📤</text>
+        <text class="node-label" x="516" y="532">Egress</text>
+        <text class="node-sub"   x="516" y="548">Format · Notify</text>
       </g>
 
       <!-- 6. Salesforce Result -->
       <g id="n-sf-result" class="gnode">
-        <rect class="node-rect" x="270" y="618" width="200" height="52"/>
-        <text class="node-icon" x="312" y="644">✅</text>
-        <text class="node-label" x="390" y="638">Opportunity Updated</text>
-        <text class="node-sub"   x="390" y="654">Status: Approved</text>
+        <rect class="node-rect" x="400" y="618" width="200" height="52"/>
+        <text class="node-icon" x="440" y="644">✅</text>
+        <text class="node-label" x="520" y="638">Opportunity Updated</text>
+        <text class="node-sub"   x="520" y="654">Status: Approved</text>
       </g>
 
       <!-- Fabric boundary label -->
-      <rect x="10" y="205" width="720" height="325" rx="14" fill="none" stroke="#2e3352" stroke-width="1" stroke-dasharray="6 5"/>
+      <rect x="10" y="205" width="980" height="325" rx="14" fill="none" stroke="#2e3352" stroke-width="1" stroke-dasharray="6 5"/>
       <text x="26" y="224" font-size="11" fill="#2e3352" font-weight="600" letter-spacing=".6">AGENT FABRIC BOUNDARY</text>
 
     </svg>
