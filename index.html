@@ -98,9 +98,11 @@
     .tag-green { color: var(--green); font-weight: 700; }
     .tag-amber { color: var(--amber); font-weight: 700; }
 
-    /* ── Run button ─────────────────────────────────────────────── */
-    #runBtn {
-      width: 100%; margin-top: 16px;
+    /* ── Step controls ──────────────────────────────────────────── */
+    .step-controls { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+    #nextBtn {
+      width: 100%;
       background: linear-gradient(135deg, var(--primary), #0070cc);
       color: #fff; border: none;
       padding: 13px 0; border-radius: 8px;
@@ -108,8 +110,26 @@
       cursor: pointer; transition: opacity .2s, transform .1s;
       letter-spacing: -.2px;
     }
-    #runBtn:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
-    #runBtn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+    #nextBtn:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
+    #nextBtn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    .step-footer {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    #resetBtn {
+      background: var(--surface2); color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 7px 14px; border-radius: 6px;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: background .2s, color .2s;
+    }
+    #resetBtn:hover { background: var(--border); color: var(--text); }
+
+    #step-indicator {
+      font-size: 12px; color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
 
     /* ── Console ────────────────────────────────────────────────── */
     #console {
@@ -538,7 +558,13 @@
         <tr><td>Policy Limit</td><td class="tag-amber">15% — needs approval</td></tr>
         <tr><td>Expected Outcome</td><td class="tag-green">Approved ✓</td></tr>
       </table>
-      <button id="runBtn" onclick="runSimulation()">▶ Submit Approval Request</button>
+      <div class="step-controls">
+        <button id="nextBtn" onclick="nextStep()">▶ Start — Submit Approval Request</button>
+        <div class="step-footer">
+          <button id="resetBtn" onclick="resetSimulation()">↺ Reset</button>
+          <span id="step-indicator">Step 0 / 10</span>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -756,19 +782,47 @@ function edgeReset(id)   { const e = document.getElementById(id); if(e) e.classL
 const ALL_NODES = ['n-trigger','n-ingress','n-broker','n-sfq','n-llm','n-a2a','n-claude','n-sfu','n-egress','n-sf-result'];
 const ALL_EDGES = ['e-trig-ing','e-ing-brok','e-brok-sfq','e-brok-llm','e-brok-a2a','e-brok-cla','e-brok-sfu',
                    'e-sfq-brok','e-llm-brok','e-a2a-brok','e-cla-brok','e-sfu-brok','e-conv-eg','e-eg-sf'];
+
 function resetAll() {
   ALL_NODES.forEach(nodeReset);
   ALL_EDGES.forEach(edgeReset);
   consoleEl.innerHTML = '';
 }
 
-/* ── Simulation steps ──────────────────────────────────────────── */
+/* ── Manual step-through simulation ───────────────────────────── */
 const steps = [
-  { t:    0, fn: () => { nodeActive('n-trigger'); log('🚀 Sales rep submits 25% discount request for Acme Global Corp ($250k deal)', 'info'); }},
-  { t:  900, fn: () => { edgeActive('e-trig-ing'); }},
-  { t: 1500, fn: () => { edgeDone('e-trig-ing'); nodeActive('n-ingress'); log('📥 Ingress: payload received — validating OAuth 2.0 token and rate-limit budget', 'proc'); }},
-  { t: 2600, fn: () => { nodeDone('n-ingress'); nodeActive('n-broker'); edgeActive('e-ing-brok'); log('🤖 Agent Broker activated — analysing context and routing to sub-agents', 'proc'); }},
-  { t: 3600, fn: () => {
+  {
+    label: '▶ Start — Submit Approval Request',
+    next:  'Next: Ingress validation →',
+    fn: () => {
+      nodeActive('n-trigger');
+      log('🚀 Sales rep submits 25% discount request for Acme Global Corp ($250k deal)', 'info');
+    }
+  },
+  {
+    label: 'Next: Ingress validation →',
+    next:  'Next: Agent Broker →',
+    fn: () => {
+      edgeActive('e-trig-ing');
+      edgeDone('e-trig-ing');
+      nodeActive('n-ingress');
+      log('📥 Ingress: payload received — validating OAuth 2.0 token and rate-limit budget', 'proc');
+    }
+  },
+  {
+    label: 'Next: Agent Broker →',
+    next:  'Next: Dispatch sub-agents →',
+    fn: () => {
+      nodeDone('n-ingress');
+      edgeActive('e-ing-brok');
+      nodeActive('n-broker');
+      log('🤖 Agent Broker activated — analysing context and routing to sub-agents', 'proc');
+    }
+  },
+  {
+    label: 'Next: Dispatch sub-agents →',
+    next:  'Next: LLM reasoning →',
+    fn: () => {
       edgeDone('e-ing-brok');
       edgeActive('e-brok-sfq'); edgeActive('e-brok-llm');
       edgeActive('e-brok-a2a'); edgeActive('e-brok-cla');
@@ -777,39 +831,100 @@ const steps = [
       nodeActive('n-a2a'); nodeActive('n-claude'); nodeActive('n-sfu');
       log('🔍 [MCP-Salesforce] Querying Opportunity + 36-month account discount history', 'proc');
       log('☁️  [A2A Agentforce] Checking exec availability & Slack threads', 'proc');
-  }},
-  { t: 5400, fn: () => { log('🧠 [OpenAI GPT-4o] Reasoning: Acme Global is Tier-1, 98% retention, 62% net margin — exception justified', 'proc'); }},
-  { t: 6800, fn: () => {
+    }
+  },
+  {
+    label: 'Next: LLM reasoning →',
+    next:  'Next: Policy cross-check →',
+    fn: () => {
+      log('🧠 [OpenAI GPT-4o] Reasoning: Acme Global is Tier-1, 98% retention, 62% net margin — exception justified', 'proc');
+    }
+  },
+  {
+    label: 'Next: Policy cross-check →',
+    next:  'Next: Salesforce update →',
+    fn: () => {
       log('🔮 [A2A Claude] Policy cross-check: confidence 0.91 — no secondary check required', 'info');
       nodeDone('n-sfq'); nodeDone('n-llm'); nodeDone('n-a2a'); nodeDone('n-claude');
       edgeDone('e-brok-sfq'); edgeDone('e-brok-llm'); edgeDone('e-brok-a2a'); edgeDone('e-brok-cla');
       edgeActive('e-sfq-brok'); edgeActive('e-llm-brok'); edgeActive('e-a2a-brok'); edgeActive('e-cla-brok');
-  }},
-  { t: 8000, fn: () => {
+    }
+  },
+  {
+    label: 'Next: Salesforce update →',
+    next:  'Next: Egress & notify →',
+    fn: () => {
       log('📝 [MCP-Salesforce] Updating Opportunity — Status → "Approved", logging LLM justification in Chatter', 'proc');
       nodeDone('n-sfu'); edgeDone('e-brok-sfu'); edgeActive('e-sfu-brok');
-  }},
-  { t: 9200, fn: () => {
+    }
+  },
+  {
+    label: 'Next: Egress & notify →',
+    next:  'Next: Complete →',
+    fn: () => {
       edgeDone('e-sfq-brok'); edgeDone('e-llm-brok'); edgeDone('e-a2a-brok'); edgeDone('e-cla-brok'); edgeDone('e-sfu-brok');
       nodeDone('n-broker');
       edgeActive('e-conv-eg'); nodeActive('n-egress');
       log('📤 Egress: formatting response payload, dispatching notification to sales rep', 'info');
-  }},
-  { t:10500, fn: () => {
+    }
+  },
+  {
+    label: 'Next: Complete →',
+    next:  null,
+    fn: () => {
       edgeDone('e-conv-eg'); edgeActive('e-eg-sf');
       nodeDone('n-egress'); nodeActive('n-sf-result');
       log('✅ Pipeline complete — Opportunity updated, sales rep notified via email + Salesforce Bell', 'ok');
       nodeDone('n-trigger');
-      document.getElementById('runBtn').disabled = false;
-  }},
-  { t:11400, fn: () => { edgeDone('e-eg-sf'); nodeDone('n-sf-result'); }}
+    }
+  },
+  {
+    label: null,
+    next:  null,
+    fn: () => {
+      edgeDone('e-eg-sf'); nodeDone('n-sf-result');
+    }
+  }
 ];
 
-function runSimulation() {
-  document.getElementById('runBtn').disabled = true;
-  resetAll();
-  steps.forEach(s => setTimeout(s.fn, s.t));
+let currentStep = 0;
+
+function updateStepUI() {
+  const btn = document.getElementById('nextBtn');
+  const indicator = document.getElementById('step-indicator');
+  const total = steps.length - 1; // last step is cosmetic finish, user sees 0–9
+
+  if (currentStep === 0) {
+    btn.textContent = '▶ Start — Submit Approval Request';
+    btn.disabled = false;
+  } else if (currentStep < steps.length) {
+    const label = steps[currentStep].label;
+    btn.textContent = label || '✓ Done';
+    btn.disabled = (label === null);
+  } else {
+    btn.textContent = '✓ Done';
+    btn.disabled = true;
+  }
+
+  const displayStep = Math.min(currentStep, total);
+  indicator.textContent = `Step ${displayStep} / ${total}`;
 }
+
+function nextStep() {
+  if (currentStep >= steps.length) return;
+  steps[currentStep].fn();
+  currentStep++;
+  updateStepUI();
+}
+
+function resetSimulation() {
+  currentStep = 0;
+  resetAll();
+  updateStepUI();
+}
+
+// Initialise on load
+updateStepUI();
 </script>
 </body>
 </html>
