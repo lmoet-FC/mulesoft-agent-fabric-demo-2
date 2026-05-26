@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MuleSoft Agent Fabric — Interactive Demo</title>
+  <style>
+    /* ── Reset & Variables ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:          #0f1117;
+      --surface:     #1a1d27;
+      --surface2:    #22263a;
+      --border:      #2e3352;
+      --text:        #e2e8f0;
+      --muted:       #7988a7;
+      --primary:     #00aaff;
+      --primary-dim: #003d5c;
+      --green:       #22c55e;
+      --green-dim:   #052e16;
+      --amber:       #f59e0b;
+      --purple:      #a78bfa;
+      --red:         #f87171;
+      --node-w:      160px;
+      --node-h:      56px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 0 0 60px;
+    }
+
+    /* ── Header ────────────────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, #00aaff18 0%, #a78bfa18 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 24px 40px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header .logo {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--primary), var(--purple));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    header h1 { font-size: 22px; font-weight: 700; letter-spacing: -.3px; }
+    header p  { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .badge {
+      margin-left: auto;
+      background: var(--primary-dim);
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* ── Main layout ────────────────────────────────────────────── */
+    .main {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 24px;
+      padding: 24px 40px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ── Panel card ─────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+    }
+    .card h3 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── Opportunity summary ──────────────────────────────────── */
+    .deal-table { width: 100%; font-size: 13.5px; border-collapse: collapse; }
+    .deal-table td { padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .deal-table td:first-child { color: var(--muted); width: 50%; }
+    .deal-table tr:last-child td { border-bottom: none; }
+    .tag-red   { color: #f87171; font-weight: 700; }
+    .tag-green { color: var(--green); font-weight: 700; }
+    .tag-amber { color: var(--amber); font-weight: 700; }
+
+    /* ── Run button ─────────────────────────────────────────────── */
+    #runBtn {
+      width: 100%; margin-top: 16px;
+      background: linear-gradient(135deg, var(--primary), #0070cc);
+      color: #fff; border: none;
+      padding: 13px 0; border-radius: 8px;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: opacity .2s, transform .1s;
+      letter-spacing: -.2px;
+    }
+    #runBtn:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
+    #runBtn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    /* ── Console ────────────────────────────────────────────────── */
+    #console {
+      background: #080b11;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      height: 220px;
+      overflow-y: auto;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      margin-top: 12px;
+    }
+    .log { padding: 2px 0; }
+    .log .ts { color: #3f4d6b; margin-right: 6px; }
+    .log.info  .msg { color: #60a5fa; }
+    .log.proc  .msg { color: var(--amber); }
+    .log.ok    .msg { color: var(--green); }
+    .log.err   .msg { color: var(--red); }
+
+    /* ── Diagram wrapper ────────────────────────────────────────── */
+    .diagram-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .diagram-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 32px 32px;
+      position: relative;
+      overflow: hidden;
+    }
+    .diagram-card h3 {
+      font-size: 13px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .8px;
+      color: var(--muted); margin-bottom: 24px;
+    }
+
+    /* ── SVG graph canvas ───────────────────────────────────────── */
+    #graph-svg {
+      width: 100%;
+      display: block;
+    }
+
+    /* ── Node styles (SVG foreignObject rendered as HTML) ── */
+    .gnode {
+      cursor: default;
+      transition: filter .3s;
+    }
+    .gnode.clickable { cursor: pointer; }
+    .gnode.clickable:hover rect { filter: brightness(1.2); }
+
+    .node-rect {
+      rx: 10; ry: 10;
+      fill: var(--surface2);
+      stroke: var(--border);
+      stroke-width: 1.5;
+      transition: fill .35s, stroke .35s, filter .35s;
+    }
+    .node-rect.active {
+      fill: #003d5c;
+      stroke: var(--primary);
+      stroke-width: 2.5;
+      filter: drop-shadow(0 0 8px #00aaffaa);
+    }
+    .node-rect.done {
+      fill: var(--green-dim);
+      stroke: var(--green);
+      stroke-width: 2;
+      filter: drop-shadow(0 0 6px #22c55e88);
+    }
+    .node-rect.broker-rect {
+      fill: #1e1535;
+      stroke: var(--purple);
+      stroke-width: 1.5;
+      rx: 12; ry: 12;
+    }
+    .node-rect.broker-rect.active {
+      fill: #2d1f55;
+      stroke: var(--purple);
+      filter: drop-shadow(0 0 10px #a78bfa99);
+    }
+    .node-icon { font-size: 18px; dominant-baseline: central; text-anchor: middle; }
+    .node-label {
+      font-size: 12.5px; font-weight: 600;
+      fill: var(--text); text-anchor: middle;
+      dominant-baseline: central;
+    }
+    .node-sub {
+      font-size: 10.5px; fill: var(--muted);
+      text-anchor: middle; dominant-baseline: central;
+    }
+
+    /* ── Edges ──────────────────────────────────────────────────── */
+    .edge {
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 1.5;
+      marker-end: url(#arrow-grey);
+      transition: stroke .35s, stroke-width .35s, filter .35s;
+    }
+    .edge.active {
+      stroke: var(--primary);
+      stroke-width: 2.5;
+      marker-end: url(#arrow-blue);
+      filter: drop-shadow(0 0 4px #00aaff88);
+    }
+    .edge.done {
+      stroke: var(--green);
+      stroke-width: 2;
+      marker-end: url(#arrow-green);
+    }
+    .edge.return {
+      stroke: var(--border);
+      stroke-dasharray: 5 4;
+    }
+    .edge.return.active {
+      stroke: var(--purple);
+      stroke-dasharray: 5 4;
+      marker-end: url(#arrow-purple);
+    }
+
+    /* ── Broker click hint ─────────────────────────────────────── */
+    .click-hint {
+      font-size: 10px; fill: var(--purple);
+      text-anchor: middle; dominant-baseline: central;
+      opacity: .8;
+    }
+
+    /* ── Modal ──────────────────────────────────────────────────── */
+    #modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.7);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #modal-overlay.open { display: flex; }
+
+    #modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: min(780px, 92vw);
+      max-height: 88vh;
+      overflow-y: auto;
+      padding: 28px 32px 32px;
+      position: relative;
+    }
+    #modal h2 {
+      font-size: 18px; font-weight: 700;
+      margin-bottom: 4px;
+    }
+    #modal .modal-sub {
+      color: var(--muted); font-size: 13px; margin-bottom: 20px;
+    }
+    #modal-close {
+      position: absolute; top: 18px; right: 22px;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 6px;
+      width: 30px; height: 30px; cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #modal-close:hover { background: var(--border); }
+
+    .modal-tabs {
+      display: flex; gap: 8px; margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .modal-tab {
+      padding: 6px 14px; border-radius: 6px;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; border: 1px solid transparent;
+      color: var(--muted); background: none;
+      transition: all .2s;
+    }
+    .modal-tab.active {
+      background: var(--primary-dim);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .modal-pane { display: none; }
+    .modal-pane.active { display: block; }
+
+    pre.code-block {
+      background: #080b11;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 12.5px;
+      line-height: 1.65;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .kw  { color: #c792ea; }
+    .fn  { color: #82aaff; }
+    .str { color: #c3e88d; }
+    .cmt { color: #546e7a; font-style: italic; }
+    .num { color: #f78c6c; }
+    .key { color: #ffcb6b; }
+
+    .step-list { list-style: none; counter-reset: steps; }
+    .step-list li {
+      counter-increment: steps;
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+      font-size: 13.5px;
+    }
+    .step-list li:last-child { border-bottom: none; }
+    .step-list li::before {
+      content: counter(steps);
+      min-width: 24px; height: 24px;
+      background: var(--primary-dim); color: var(--primary);
+      border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 11px; font-weight: 700;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .step-list li .step-label { font-weight: 600; color: var(--text); }
+    .step-list li .step-desc  { color: var(--muted); font-size: 12.5px; margin-top: 1px; }
+
+    .prop-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+    .prop-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+    .prop-table tr:last-child td { border-bottom: none; }
+    .prop-table td:first-child { color: var(--muted); width: 40%; font-weight: 600; }
+    .pill {
+      display: inline-block;
+      padding: 2px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+    }
+    .pill-blue   { background: var(--primary-dim); color: var(--primary); }
+    .pill-purple { background: #2d1f55; color: var(--purple); }
+    .pill-green  { background: var(--green-dim);  color: var(--green); }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">⚡</div>
+  <div>
+    <h1>MuleSoft Agent Fabric</h1>
+    <p>Interactive Architecture Demo — Automated Discount Approval</p>
+  </div>
+  <span class="badge">Live Simulation</span>
+</header>
+
+<!-- ── MODAL ──────────────────────────────────────────────────── -->
+<div id="modal-overlay" role="dialog" aria-modal="true">
+  <div id="modal">
+    <button id="modal-close" onclick="closeModal()" aria-label="Close">✕</button>
+    <h2>🤖 Agent Broker</h2>
+    <p class="modal-sub">Orchestration engine — click a tab to inspect internals</p>
+
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="switchTab('script')">Agent Script</button>
+      <button class="modal-tab" onclick="switchTab('flow')">Orchestration Flow</button>
+      <button class="modal-tab" onclick="switchTab('config')">Configuration</button>
+    </div>
+
+    <!-- SCRIPT TAB -->
+    <div id="tab-script" class="modal-pane active">
+      <pre class="code-block"><span class="cmt"># MuleSoft Agent Fabric — Agent Broker Script</span>
+<span class="cmt"># Runtime: MuleSoft Flex Gateway 4.x  |  LLM: OpenAI GPT-4o</span>
+
+<span class="kw">agent</span> <span class="fn">DiscountApprovalBroker</span>:
+  <span class="key">description</span>: <span class="str">"Orchestrates multi-agent discount approval pipeline"</span>
+  <span class="key">model</span>:       <span class="str">"gpt-4o"</span>
+  <span class="key">temperature</span>: <span class="num">0.1</span>
+
+  <span class="key">tools</span>:
+    - <span class="fn">sfdc_query</span>       <span class="cmt"># MCP-Salesforce: read opportunity + account data</span>
+    - <span class="fn">sfdc_update</span>      <span class="cmt"># MCP-Salesforce: write approval decision back</span>
+    - <span class="fn">a2a_agentforce</span>   <span class="cmt"># A2A: invoke Agentforce sub-agents</span>
+    - <span class="fn">a2a_claude</span>       <span class="cmt"># A2A: invoke Claude Agent for policy reasoning</span>
+
+  <span class="key">on_trigger</span>: <span class="str">"salesforce.opportunity.discount_request"</span>
+
+  <span class="key">steps</span>:
+
+    <span class="cmt">## Step 1 — Hydrate context from Salesforce</span>
+    - <span class="key">id</span>: <span class="str">fetch_context</span>
+      <span class="key">tool</span>: <span class="fn">sfdc_query</span>
+      <span class="key">input</span>:
+        <span class="key">soql</span>: <span class="str">|
+          SELECT Id, Name, Amount, Account.Name,
+                 Account.AnnualRevenue, Account.NumberOfEmployees,
+                 Account.CustomerTier__c, CloseDate,
+                 (SELECT Id, Amount FROM OpportunityLineItems)
+          FROM Opportunity
+          WHERE Id = '{{trigger.opportunity_id}}'</span>
+      <span class="key">output</span>: <span class="str">opportunity</span>
+
+    <span class="cmt">## Step 2 — Retrieve historical discount data</span>
+    - <span class="key">id</span>: <span class="str">fetch_history</span>
+      <span class="key">tool</span>: <span class="fn">sfdc_query</span>
+      <span class="key">input</span>:
+        <span class="key">soql</span>: <span class="str">|
+          SELECT AVG(Discount__c) avg_disc, MAX(Discount__c) max_disc,
+                 COUNT(Id) deal_count
+          FROM Opportunity
+          WHERE AccountId = '{{opportunity.AccountId}}'
+            AND StageName = 'Closed Won'</span>
+      <span class="key">output</span>: <span class="str">history</span>
+
+    <span class="cmt">## Step 3 — LLM reasoning: should we approve?</span>
+    - <span class="key">id</span>: <span class="str">reason</span>
+      <span class="key">type</span>: <span class="fn">llm_reasoning</span>
+      <span class="key">prompt</span>: <span class="str">|
+        You are a revenue-operations AI making a discount approval decision.
+
+        OPPORTUNITY:   {{opportunity | json}}
+        HISTORY:       {{history | json}}
+        REQUESTED:     {{trigger.discount_pct}}%
+        POLICY_LIMIT:  15%
+
+        Evaluate whether the discount is justified. Return JSON:
+        {
+          "approved": true|false,
+          "confidence": 0-1,
+          "justification": "...",
+          "conditions": ["..."]  // any attached conditions
+        }</span>
+      <span class="key">output</span>: <span class="str">decision</span>
+
+    <span class="cmt">## Step 4 — If uncertain, invoke Claude Agent for policy cross-check</span>
+    - <span class="key">id</span>: <span class="str">policy_check</span>
+      <span class="key">condition</span>: <span class="str">"decision.confidence &lt; 0.75"</span>
+      <span class="key">tool</span>: <span class="fn">a2a_claude</span>
+      <span class="key">input</span>:
+        <span class="key">task</span>: <span class="str">"verify_discount_policy"</span>
+        <span class="key">context</span>: <span class="str">"{{decision | json}}"</span>
+      <span class="key">output</span>: <span class="str">policy_verdict</span>
+
+    <span class="cmt">## Step 5 — Write decision to Salesforce</span>
+    - <span class="key">id</span>: <span class="str">write_result</span>
+      <span class="key">tool</span>: <span class="fn">sfdc_update</span>
+      <span class="key">input</span>:
+        <span class="key">object</span>: <span class="str">"Opportunity"</span>
+        <span class="key">id</span>: <span class="str">"{{trigger.opportunity_id}}"</span>
+        <span class="key">fields</span>:
+          <span class="key">Approval_Status__c</span>:    <span class="str">"{{decision.approved ? 'Approved' : 'Rejected'}}"</span>
+          <span class="key">Approval_Notes__c</span>:     <span class="str">"{{decision.justification}}"</span>
+          <span class="key">Approved_Discount__c</span>:  <span class="str">"{{trigger.discount_pct}}"</span>
+          <span class="key">ApprovedDate__c</span>:       <span class="str">"{{now()}}"</span></pre>
+    </div>
+
+    <!-- FLOW TAB -->
+    <div id="tab-flow" class="modal-pane">
+      <ol class="step-list">
+        <li>
+          <div>
+            <div class="step-label">Receive Trigger Event</div>
+            <div class="step-desc">Salesforce Platform Event fires on discount request. Ingress validates auth token and rate-limits the caller.</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <div class="step-label">Context Hydration via MCP-Salesforce</div>
+            <div class="step-desc">Two parallel SOQL queries: live opportunity data + 36-month account discount history.</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <div class="step-label">LLM Reasoning Loop (OpenAI GPT-4o)</div>
+            <div class="step-desc">Structured prompt with policy guardrails. Returns a typed JSON decision object with confidence score.</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <div class="step-label">Conditional A2A Policy Check (Claude Agent)</div>
+            <div class="step-desc">Only invoked when confidence &lt; 75%. Claude performs a secondary policy-alignment check using internal compliance docs.</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <div class="step-label">Write Approval Decision to Salesforce</div>
+            <div class="step-desc">MCP-Salesforce updates Opportunity fields and posts a Chatter message with full LLM justification.</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <div class="step-label">Egress — Notify Sales Rep</div>
+            <div class="step-desc">Platform Event published back. Salesforce Flow triggers email + in-app notification to the rep.</div>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <!-- CONFIG TAB -->
+    <div id="tab-config" class="modal-pane">
+      <table class="prop-table">
+        <tr><td>Agent ID</td><td><code>discount-approval-broker-v2</code></td></tr>
+        <tr><td>Runtime</td><td>MuleSoft Flex Gateway 4.6</td></tr>
+        <tr><td>LLM Model</td><td><span class="pill pill-blue">GPT-4o</span></td></tr>
+        <tr><td>Fallback Model</td><td><span class="pill pill-purple">Claude 3.7 Sonnet</span></td></tr>
+        <tr><td>Protocol</td><td>MCP 1.0 + A2A Draft-5</td></tr>
+        <tr><td>Timeout</td><td>30 000 ms</td></tr>
+        <tr><td>Max Retries</td><td>3 (exponential backoff)</td></tr>
+        <tr><td>Auth</td><td>OAuth 2.0 Client Credentials</td></tr>
+        <tr><td>Salesforce Org</td><td>Production (NA57)</td></tr>
+        <tr><td>Status</td><td><span class="pill pill-green">Active</span></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN ────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Left panel -->
+  <div>
+    <div class="card" style="margin-bottom:20px;">
+      <h3>Deal Context</h3>
+      <table class="deal-table">
+        <tr><td>CRM Object</td><td>Salesforce Opportunity</td></tr>
+        <tr><td>Account</td><td>Acme Global Corp</td></tr>
+        <tr><td>Deal Value</td><td>$250,000 USD</td></tr>
+        <tr><td>Requested Discount</td><td class="tag-red">25% ($62,500)</td></tr>
+        <tr><td>Policy Limit</td><td class="tag-amber">15% — needs approval</td></tr>
+        <tr><td>Expected Outcome</td><td class="tag-green">Approved ✓</td></tr>
+      </table>
+      <button id="runBtn" onclick="runSimulation()">▶ Submit Approval Request</button>
+    </div>
+
+    <div class="card">
+      <h3>Execution Log</h3>
+      <div id="console"></div>
+    </div>
+  </div>
+
+  <!-- Right: diagram -->
+  <div class="diagram-card">
+    <h3>Live Agent Fabric Pipeline — click the Broker node to inspect its script</h3>
+
+    <!-- SVG DAG — top-down -->
+    <svg id="graph-svg" viewBox="0 0 740 680" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Arrow markers -->
+        <marker id="arrow-grey"   markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#2e3352"/>
+        </marker>
+        <marker id="arrow-blue"   markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#00aaff"/>
+        </marker>
+        <marker id="arrow-green"  markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#22c55e"/>
+        </marker>
+        <marker id="arrow-purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#a78bfa"/>
+        </marker>
+        <!-- Subtle grid -->
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e2235" stroke-width=".5"/>
+        </pattern>
+      </defs>
+
+      <!-- Grid background -->
+      <rect width="740" height="680" fill="url(#grid)"/>
+
+      <!-- ── EDGES (drawn before nodes so nodes sit on top) ── -->
+
+      <!-- Trigger → Ingress -->
+      <line id="e-trig-ing" class="edge" x1="370" y1="66" x2="370" y2="118"/>
+
+      <!-- Ingress → Broker -->
+      <line id="e-ing-brok" class="edge" x1="370" y1="174" x2="370" y2="226"/>
+
+      <!-- Broker → MCP Salesforce Query (left) -->
+      <path id="e-brok-sfq" class="edge" d="M 285 264 C 220 264 180 310 180 340"/>
+
+      <!-- Broker → OpenAI LLM (center-left) -->
+      <path id="e-brok-llm" class="edge" d="M 340 282 C 310 310 295 330 280 360"/>
+
+      <!-- Broker → A2A Agentforce (center) -->
+      <line id="e-brok-a2a" class="edge" x1="370" y1="282" x2="370" y2="360"/>
+
+      <!-- Broker → A2A Claude (right) -->
+      <path id="e-brok-cla" class="edge" d="M 400 282 C 430 310 450 330 460 360"/>
+
+      <!-- Broker → MCP Salesforce Update (far right) -->
+      <path id="e-brok-sfu" class="edge" d="M 455 264 C 540 264 560 310 560 340"/>
+
+      <!-- Return paths (dashed) up from sub-agents to broker level -->
+      <path id="e-sfq-brok" class="edge return" d="M 180 396 C 180 440 280 460 370 460"/>
+      <path id="e-llm-brok" class="edge return" d="M 280 416 C 280 450 330 460 370 460"/>
+      <path id="e-a2a-brok" class="edge return" d="M 370 416 L 370 460"/>
+      <path id="e-cla-brok" class="edge return" d="M 460 416 C 460 450 410 460 370 460"/>
+      <path id="e-sfu-brok" class="edge return" d="M 560 396 C 560 450 460 460 370 460"/>
+
+      <!-- Convergence → Egress -->
+      <line id="e-conv-eg" class="edge" x1="370" y1="460" x2="370" y2="510"/>
+
+      <!-- Egress → Salesforce (response) -->
+      <line id="e-eg-sf" class="edge" x1="370" y1="566" x2="370" y2="618"/>
+
+      <!-- ── NODES ── -->
+
+      <!-- 1. Trigger / Request -->
+      <g id="n-trigger" class="gnode">
+        <rect class="node-rect" x="290" y="30" width="160" height="56"/>
+        <text class="node-icon" x="330" y="58">🚀</text>
+        <text class="node-label" x="380" y="52">Sales Rep Request</text>
+        <text class="node-sub"   x="380" y="68">CRM Trigger Event</text>
+      </g>
+
+      <!-- 2. Ingress -->
+      <g id="n-ingress" class="gnode">
+        <rect class="node-rect" x="310" y="118" width="120" height="56"/>
+        <text class="node-icon" x="342" y="146">📥</text>
+        <text class="node-label" x="386" y="140">Ingress</text>
+        <text class="node-sub"   x="386" y="156">Auth · Rate Limit</text>
+      </g>
+
+      <!-- 3. Agent Broker (clickable) -->
+      <g id="n-broker" class="gnode clickable" onclick="openModal()">
+        <rect class="node-rect broker-rect" x="265" y="226" width="210" height="56"/>
+        <text class="node-icon" x="305" y="254">🤖</text>
+        <text class="node-label" x="390" y="248">Agent Broker</text>
+        <text class="node-sub"   x="390" y="264">Orchestration Engine</text>
+        <text class="click-hint" x="390" y="278">⬡ click to inspect script</text>
+      </g>
+
+      <!-- 4a. MCP-Salesforce Query (left) -->
+      <g id="n-sfq" class="gnode">
+        <rect class="node-rect" x="100" y="340" width="160" height="56"/>
+        <text class="node-icon" x="140" y="368">🔍</text>
+        <text class="node-label" x="196" y="362">MCP-Salesforce</text>
+        <text class="node-sub"   x="196" y="378">Query Objects</text>
+      </g>
+
+      <!-- 4b. OpenAI LLM -->
+      <g id="n-llm" class="gnode">
+        <rect class="node-rect" x="200" y="360" width="160" height="56"/>
+        <text class="node-icon" x="240" y="388">🧠</text>
+        <text class="node-label" x="296" y="382">OpenAI LLM</text>
+        <text class="node-sub"   x="296" y="398">Reasoning Loop</text>
+      </g>
+
+      <!-- 4c. A2A Agentforce -->
+      <g id="n-a2a" class="gnode">
+        <rect class="node-rect" x="290" y="360" width="160" height="56"/>
+        <text class="node-icon" x="330" y="388">☁️</text>
+        <text class="node-label" x="386" y="382">A2A Agentforce</text>
+        <text class="node-sub"   x="386" y="398">Sub-agents</text>
+      </g>
+
+      <!-- 4d. A2A Claude -->
+      <g id="n-claude" class="gnode">
+        <rect class="node-rect" x="380" y="360" width="160" height="56"/>
+        <text class="node-icon" x="420" y="388">🔮</text>
+        <text class="node-label" x="476" y="382">A2A Claude Agent</text>
+        <text class="node-sub"   x="476" y="398">Policy Check</text>
+      </g>
+
+      <!-- 4e. MCP-Salesforce Update (right) -->
+      <g id="n-sfu" class="gnode">
+        <rect class="node-rect" x="480" y="340" width="160" height="56"/>
+        <text class="node-icon" x="520" y="368">📝</text>
+        <text class="node-label" x="576" y="362">MCP-Salesforce</text>
+        <text class="node-sub"   x="576" y="378">Update Objects</text>
+      </g>
+
+      <!-- 5. Egress -->
+      <g id="n-egress" class="gnode">
+        <rect class="node-rect" x="310" y="510" width="120" height="56"/>
+        <text class="node-icon" x="342" y="538">📤</text>
+        <text class="node-label" x="386" y="532">Egress</text>
+        <text class="node-sub"   x="386" y="548">Format · Notify</text>
+      </g>
+
+      <!-- 6. Salesforce Result -->
+      <g id="n-sf-result" class="gnode">
+        <rect class="node-rect" x="270" y="618" width="200" height="52"/>
+        <text class="node-icon" x="312" y="644">✅</text>
+        <text class="node-label" x="390" y="638">Opportunity Updated</text>
+        <text class="node-sub"   x="390" y="654">Status: Approved</text>
+      </g>
+
+      <!-- Fabric boundary label -->
+      <rect x="10" y="205" width="720" height="325" rx="14" fill="none" stroke="#2e3352" stroke-width="1" stroke-dasharray="6 5"/>
+      <text x="26" y="224" font-size="11" fill="#2e3352" font-weight="600" letter-spacing=".6">AGENT FABRIC BOUNDARY</text>
+
+    </svg>
+  </div>
+</div>
+
+<!-- ── SCRIPTS ─────────────────────────────────────────────────── -->
+<script>
+/* ── Modal helpers ─────────────────────────────────────────────── */
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+function switchTab(name) {
+  document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.modal-pane').forEach(p => p.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById(`tab-${name}`).classList.add('active');
+}
+
+/* ── Console ───────────────────────────────────────────────────── */
+const consoleEl = document.getElementById('console');
+function log(msg, type = 'info') {
+  const d = document.createElement('div');
+  d.className = `log ${type}`;
+  const now = new Date();
+  const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}.${String(now.getMilliseconds()).padStart(3,'0')}`;
+  d.innerHTML = `<span class="ts">${ts}</span><span class="msg">${msg}</span>`;
+  consoleEl.appendChild(d);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+/* ── Node/edge state helpers ───────────────────────────────────── */
+function nodeActive(id)  {
+  const r = document.querySelector(`#${id} .node-rect`);
+  if (r) { r.classList.remove('done'); r.classList.add('active'); }
+}
+function nodeDone(id) {
+  const r = document.querySelector(`#${id} .node-rect`);
+  if (r) { r.classList.remove('active'); r.classList.add('done'); }
+}
+function nodeReset(id) {
+  const r = document.querySelector(`#${id} .node-rect`);
+  if (r) r.classList.remove('active','done');
+}
+function edgeActive(id)  { const e = document.getElementById(id); if(e){ e.classList.remove('done'); e.classList.add('active'); } }
+function edgeDone(id)    { const e = document.getElementById(id); if(e){ e.classList.remove('active'); e.classList.add('done'); } }
+function edgeReset(id)   { const e = document.getElementById(id); if(e) e.classList.remove('active','done'); }
+
+const ALL_NODES = ['n-trigger','n-ingress','n-broker','n-sfq','n-llm','n-a2a','n-claude','n-sfu','n-egress','n-sf-result'];
+const ALL_EDGES = ['e-trig-ing','e-ing-brok','e-brok-sfq','e-brok-llm','e-brok-a2a','e-brok-cla','e-brok-sfu',
+                   'e-sfq-brok','e-llm-brok','e-a2a-brok','e-cla-brok','e-sfu-brok','e-conv-eg','e-eg-sf'];
+function resetAll() {
+  ALL_NODES.forEach(nodeReset);
+  ALL_EDGES.forEach(edgeReset);
+  consoleEl.innerHTML = '';
+}
+
+/* ── Simulation steps ──────────────────────────────────────────── */
+const steps = [
+  { t:    0, fn: () => { nodeActive('n-trigger'); log('🚀 Sales rep submits 25% discount request for Acme Global Corp ($250k deal)', 'info'); }},
+  { t:  900, fn: () => { edgeActive('e-trig-ing'); }},
+  { t: 1500, fn: () => { edgeDone('e-trig-ing'); nodeActive('n-ingress'); log('📥 Ingress: payload received — validating OAuth 2.0 token and rate-limit budget', 'proc'); }},
+  { t: 2600, fn: () => { nodeDone('n-ingress'); nodeActive('n-broker'); edgeActive('e-ing-brok'); log('🤖 Agent Broker activated — analysing context and routing to sub-agents', 'proc'); }},
+  { t: 3600, fn: () => {
+      edgeDone('e-ing-brok');
+      edgeActive('e-brok-sfq'); edgeActive('e-brok-llm');
+      edgeActive('e-brok-a2a'); edgeActive('e-brok-cla');
+      edgeActive('e-brok-sfu');
+      nodeActive('n-sfq'); nodeActive('n-llm');
+      nodeActive('n-a2a'); nodeActive('n-claude'); nodeActive('n-sfu');
+      log('🔍 [MCP-Salesforce] Querying Opportunity + 36-month account discount history', 'proc');
+      log('☁️  [A2A Agentforce] Checking exec availability & Slack threads', 'proc');
+  }},
+  { t: 5400, fn: () => { log('🧠 [OpenAI GPT-4o] Reasoning: Acme Global is Tier-1, 98% retention, 62% net margin — exception justified', 'proc'); }},
+  { t: 6800, fn: () => {
+      log('🔮 [A2A Claude] Policy cross-check: confidence 0.91 — no secondary check required', 'info');
+      nodeDone('n-sfq'); nodeDone('n-llm'); nodeDone('n-a2a'); nodeDone('n-claude');
+      edgeDone('e-brok-sfq'); edgeDone('e-brok-llm'); edgeDone('e-brok-a2a'); edgeDone('e-brok-cla');
+      edgeActive('e-sfq-brok'); edgeActive('e-llm-brok'); edgeActive('e-a2a-brok'); edgeActive('e-cla-brok');
+  }},
+  { t: 8000, fn: () => {
+      log('📝 [MCP-Salesforce] Updating Opportunity — Status → "Approved", logging LLM justification in Chatter', 'proc');
+      nodeDone('n-sfu'); edgeDone('e-brok-sfu'); edgeActive('e-sfu-brok');
+  }},
+  { t: 9200, fn: () => {
+      edgeDone('e-sfq-brok'); edgeDone('e-llm-brok'); edgeDone('e-a2a-brok'); edgeDone('e-cla-brok'); edgeDone('e-sfu-brok');
+      nodeDone('n-broker');
+      edgeActive('e-conv-eg'); nodeActive('n-egress');
+      log('📤 Egress: formatting response payload, dispatching notification to sales rep', 'info');
+  }},
+  { t:10500, fn: () => {
+      edgeDone('e-conv-eg'); edgeActive('e-eg-sf');
+      nodeDone('n-egress'); nodeActive('n-sf-result');
+      log('✅ Pipeline complete — Opportunity updated, sales rep notified via email + Salesforce Bell', 'ok');
+      nodeDone('n-trigger');
+      document.getElementById('runBtn').disabled = false;
+  }},
+  { t:11400, fn: () => { edgeDone('e-eg-sf'); nodeDone('n-sf-result'); }}
+];
+
+function runSimulation() {
+  document.getElementById('runBtn').disabled = true;
+  resetAll();
+  steps.forEach(s => setTimeout(s.fn, s.t));
+}
+</script>
+</body>
+</html>
