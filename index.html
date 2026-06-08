@@ -262,6 +262,94 @@
       opacity: .8;
     }
 
+    /* ── LLM node — amber "reasoning engine" theme ─────────────── */
+    .node-rect.llm-rect {
+      fill: #1c1500;
+      stroke: #f59e0b88;
+      stroke-width: 2;
+    }
+    .node-rect.llm-rect.active {
+      fill: #2a1d00;
+      stroke: #f59e0b;
+      stroke-width: 2.5;
+      animation: llm-pulse 1.5s ease-in-out infinite;
+    }
+    .node-rect.llm-rect.done {
+      animation: none;
+      fill: var(--green-dim);
+      stroke: var(--green);
+      stroke-width: 2;
+      filter: drop-shadow(0 0 6px #22c55e88);
+    }
+    @keyframes llm-pulse {
+      0%, 100% { filter: drop-shadow(0 0 6px #f59e0b55); }
+      50%       { filter: drop-shadow(0 0 20px #f59e0bcc); }
+    }
+    .llm-badge-text {
+      font-size: 9px; font-weight: 700; letter-spacing: .9px;
+      text-transform: uppercase; fill: #f59e0b88;
+      text-anchor: middle; dominant-baseline: central;
+    }
+
+    /* ── Thinking dots ──────────────────────────────────────────── */
+    .thinking-dot { fill: #f59e0b; opacity: 0; }
+    #llm-dot1.active-dot { animation: dot-blink 1s ease-in-out infinite 0s; }
+    #llm-dot2.active-dot { animation: dot-blink 1s ease-in-out infinite .33s; }
+    #llm-dot3.active-dot { animation: dot-blink 1s ease-in-out infinite .66s; }
+    @keyframes dot-blink {
+      0%, 100% { opacity: 0.15; }
+      50%       { opacity: 1; }
+    }
+
+    /* ── Reasoning panel ────────────────────────────────────────── */
+    #reasoning-panel {
+      display: none;
+      margin-top: 20px;
+      background: linear-gradient(135deg, #1c150088 0%, #0f111788 100%);
+      border: 1px solid #f59e0b66;
+      border-radius: 12px;
+      padding: 16px 20px 18px;
+      animation: panel-in .3s ease;
+    }
+    #reasoning-panel.visible { display: block; }
+    @keyframes panel-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .reasoning-title {
+      font-size: 11px; font-weight: 700; letter-spacing: .8px;
+      text-transform: uppercase; color: #f59e0b;
+      margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+    }
+    .reasoning-title .r-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #f59e0b;
+      animation: dot-blink 1s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    .reasoning-body {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    .reasoning-col h4 {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+      color: var(--muted); margin-bottom: 8px; font-weight: 600;
+    }
+    .reasoning-col pre {
+      background: #080b11;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 11px; line-height: 1.65;
+      color: var(--text); white-space: pre; margin: 0;
+      overflow-x: auto;
+    }
+    .r-key   { color: #ffcb6b; }
+    .r-val   { color: #c3e88d; }
+    .r-num   { color: #f78c6c; }
+    .r-bool  { color: #82aaff; }
+    .r-cmt   { color: #546e7a; font-style: italic; }
+
     /* ── Modal ──────────────────────────────────────────────────── */
     #modal-overlay {
       display: none;
@@ -673,12 +761,18 @@
         <text class="node-sub"   x="140" y="378">Query Objects</text>
       </g>
 
-      <!-- 4b. OpenAI LLM -->
+      <!-- 4b. OpenAI LLM — Reasoning Engine -->
+      <!-- Badge above node -->
+      <text class="llm-badge-text" x="310" y="330">⬡ Reasoning Engine</text>
       <g id="n-llm" class="gnode">
-        <rect class="node-rect" x="230" y="340" width="160" height="56"/>
-        <text class="node-icon" x="250" y="368">🧠</text>
-        <text class="node-label" x="330" y="362">OpenAI LLM</text>
-        <text class="node-sub"   x="330" y="378">Reasoning Loop</text>
+        <rect class="node-rect llm-rect" x="230" y="338" width="160" height="56"/>
+        <text class="node-icon" x="250" y="366">🧠</text>
+        <text class="node-label" x="330" y="360">OpenAI LLM</text>
+        <text class="node-sub"   x="330" y="375">GPT-4o · Reasoning</text>
+        <!-- Thinking dots — animated when LLM is active -->
+        <circle id="llm-dot1" class="thinking-dot" cx="297" cy="387" r="3"/>
+        <circle id="llm-dot2" class="thinking-dot" cx="310" cy="387" r="3"/>
+        <circle id="llm-dot3" class="thinking-dot" cx="323" cy="387" r="3"/>
       </g>
 
       <!-- 4c. A2A Agentforce -->
@@ -726,6 +820,50 @@
       <text x="26" y="224" font-size="11" fill="#2e3352" font-weight="600" letter-spacing=".6">AGENT FABRIC BOUNDARY</text>
 
     </svg>
+
+    <!-- ── Reasoning panel — shown during LLM step ── -->
+    <div id="reasoning-panel">
+      <div class="reasoning-title">
+        <span class="r-dot"></span>
+        GPT-4o Reasoning Engine — Processing discount request
+      </div>
+      <div class="reasoning-body">
+        <div class="reasoning-col">
+          <h4>Input Context</h4>
+          <pre><span class="r-key">opportunity</span>:
+  <span class="r-key">account</span>:   <span class="r-val">"Acme Global Corp"</span>
+  <span class="r-key">amount</span>:    <span class="r-num">250000</span>
+  <span class="r-key">tier</span>:      <span class="r-val">"Enterprise-1"</span>
+  <span class="r-key">retention</span>: <span class="r-num">98</span><span class="r-val">%</span>
+  <span class="r-key">margin</span>:    <span class="r-num">62</span><span class="r-val">%</span>
+
+<span class="r-key">history</span>:
+  <span class="r-key">avg_disc</span>:  <span class="r-num">11.4</span><span class="r-val">%</span>
+  <span class="r-key">max_disc</span>:  <span class="r-num">22.0</span><span class="r-val">%</span>
+  <span class="r-key">deal_count</span>: <span class="r-num">14</span>
+
+<span class="r-key">requested</span>: <span class="r-num">25</span><span class="r-val">%</span>
+<span class="r-key">policy_limit</span>: <span class="r-num">15</span><span class="r-val">%</span></pre>
+        </div>
+        <div class="reasoning-col">
+          <h4>Decision Output</h4>
+          <pre><span class="r-cmt">// GPT-4o structured response</span>
+{
+  <span class="r-key">"approved"</span>:   <span class="r-bool">true</span>,
+  <span class="r-key">"confidence"</span>: <span class="r-num">0.91</span>,
+  <span class="r-key">"justification"</span>: <span class="r-val">"Tier-1
+    customer, 98% retention,
+    precedent at 22% exists,
+    strategic account."</span>,
+  <span class="r-key">"conditions"</span>: [
+    <span class="r-val">"VP sign-off required"</span>,
+    <span class="r-val">"1-year commit lock-in"</span>
+  ]
+}</pre>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -787,6 +925,21 @@ function resetAll() {
   ALL_NODES.forEach(nodeReset);
   ALL_EDGES.forEach(edgeReset);
   consoleEl.innerHTML = '';
+  llmThinkingOff();
+  document.getElementById('reasoning-panel').classList.remove('visible');
+}
+
+/* ── LLM thinking dot helpers ───────────────────────────────────── */
+function llmThinkingOn() {
+  ['llm-dot1','llm-dot2','llm-dot3'].forEach(id => {
+    document.getElementById(id).classList.add('active-dot');
+  });
+  document.getElementById('reasoning-panel').classList.add('visible');
+}
+function llmThinkingOff() {
+  ['llm-dot1','llm-dot2','llm-dot3'].forEach(id => {
+    document.getElementById(id).classList.remove('active-dot');
+  });
 }
 
 /* ── Manual step-through simulation ───────────────────────────── */
@@ -837,13 +990,16 @@ const steps = [
     label: 'Next: LLM reasoning →',
     next:  'Next: Policy cross-check →',
     fn: () => {
+      llmThinkingOn();
       log('🧠 [OpenAI GPT-4o] Reasoning: Acme Global is Tier-1, 98% retention, 62% net margin — exception justified', 'proc');
+      log('🧠 [OpenAI GPT-4o] Confidence: 0.91 — discount approved with conditions', 'proc');
     }
   },
   {
     label: 'Next: Policy cross-check →',
     next:  'Next: Salesforce update →',
     fn: () => {
+      llmThinkingOff();
       log('🔮 [A2A Claude] Policy cross-check: confidence 0.91 — no secondary check required', 'info');
       nodeDone('n-sfq'); nodeDone('n-llm'); nodeDone('n-a2a'); nodeDone('n-claude');
       edgeDone('e-brok-sfq'); edgeDone('e-brok-llm'); edgeDone('e-brok-a2a'); edgeDone('e-brok-cla');
