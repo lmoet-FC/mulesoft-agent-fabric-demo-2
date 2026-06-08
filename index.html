@@ -821,45 +821,20 @@
 
     </svg>
 
-    <!-- ── Reasoning panel — shown during LLM step ── -->
+    <!-- ── Reasoning panel — live-updated throughout pipeline ── -->
     <div id="reasoning-panel">
       <div class="reasoning-title">
-        <span class="r-dot"></span>
-        GPT-4o Reasoning Engine — Processing discount request
+        <span class="r-dot" id="r-dot"></span>
+        <span id="r-title">GPT-4o Reasoning Engine</span>
       </div>
       <div class="reasoning-body">
         <div class="reasoning-col">
-          <h4>Input Context</h4>
-          <pre><span class="r-key">opportunity</span>:
-  <span class="r-key">account</span>:   <span class="r-val">"Acme Global Corp"</span>
-  <span class="r-key">amount</span>:    <span class="r-num">250000</span>
-  <span class="r-key">tier</span>:      <span class="r-val">"Enterprise-1"</span>
-  <span class="r-key">retention</span>: <span class="r-num">98</span><span class="r-val">%</span>
-  <span class="r-key">margin</span>:    <span class="r-num">62</span><span class="r-val">%</span>
-
-<span class="r-key">history</span>:
-  <span class="r-key">avg_disc</span>:  <span class="r-num">11.4</span><span class="r-val">%</span>
-  <span class="r-key">max_disc</span>:  <span class="r-num">22.0</span><span class="r-val">%</span>
-  <span class="r-key">deal_count</span>: <span class="r-num">14</span>
-
-<span class="r-key">requested</span>: <span class="r-num">25</span><span class="r-val">%</span>
-<span class="r-key">policy_limit</span>: <span class="r-num">15</span><span class="r-val">%</span></pre>
+          <h4 id="r-left-heading">Context</h4>
+          <pre id="r-left"></pre>
         </div>
         <div class="reasoning-col">
-          <h4>Decision Output</h4>
-          <pre><span class="r-cmt">// GPT-4o structured response</span>
-{
-  <span class="r-key">"approved"</span>:   <span class="r-bool">true</span>,
-  <span class="r-key">"confidence"</span>: <span class="r-num">0.91</span>,
-  <span class="r-key">"justification"</span>: <span class="r-val">"Tier-1
-    customer, 98% retention,
-    precedent at 22% exists,
-    strategic account."</span>,
-  <span class="r-key">"conditions"</span>: [
-    <span class="r-val">"VP sign-off required"</span>,
-    <span class="r-val">"1-year commit lock-in"</span>
-  ]
-}</pre>
+          <h4 id="r-right-heading">Output</h4>
+          <pre id="r-right"></pre>
         </div>
       </div>
     </div>
@@ -925,22 +900,119 @@ function resetAll() {
   ALL_NODES.forEach(nodeReset);
   ALL_EDGES.forEach(edgeReset);
   consoleEl.innerHTML = '';
-  llmThinkingOff();
-  document.getElementById('reasoning-panel').classList.remove('visible');
+  ['llm-dot1','llm-dot2','llm-dot3'].forEach(id => document.getElementById(id).classList.remove('active-dot'));
+  const panel = document.getElementById('reasoning-panel');
+  panel.classList.remove('visible');
+  document.getElementById('r-left').innerHTML  = '';
+  document.getElementById('r-right').innerHTML = '';
+  document.getElementById('r-title').textContent = 'GPT-4o Reasoning Engine';
 }
 
-/* ── LLM thinking dot helpers ───────────────────────────────────── */
-function llmThinkingOn() {
-  ['llm-dot1','llm-dot2','llm-dot3'].forEach(id => {
-    document.getElementById(id).classList.add('active-dot');
+/* ── Reasoning panel helpers ────────────────────────────────────── */
+const K = s => `<span class="r-key">${s}</span>`;
+const V = s => `<span class="r-val">${s}</span>`;
+const N = s => `<span class="r-num">${s}</span>`;
+const B = s => `<span class="r-bool">${s}</span>`;
+const C = s => `<span class="r-cmt">${s}</span>`;
+
+function setReasoningState({ title, thinking, leftHeading, left, rightHeading, right }) {
+  const panel = document.getElementById('reasoning-panel');
+  panel.classList.add('visible');
+  document.getElementById('r-title').textContent = title;
+  document.getElementById('r-left-heading').textContent  = leftHeading  || 'Context';
+  document.getElementById('r-right-heading').textContent = rightHeading || 'Output';
+  document.getElementById('r-left').innerHTML  = left;
+  document.getElementById('r-right').innerHTML = right;
+
+  // Thinking dots + live dot indicator
+  const dots = ['llm-dot1','llm-dot2','llm-dot3'];
+  dots.forEach(id => {
+    const el = document.getElementById(id);
+    thinking ? el.classList.add('active-dot') : el.classList.remove('active-dot');
   });
-  document.getElementById('reasoning-panel').classList.add('visible');
+  const rdot = document.getElementById('r-dot');
+  rdot.style.animation = thinking ? '' : 'none';
+  rdot.style.opacity   = thinking ? '' : '1';
+  rdot.style.background = thinking ? '#f59e0b' : (title.includes('✅') ? '#22c55e' : '#7988a7');
 }
-function llmThinkingOff() {
-  ['llm-dot1','llm-dot2','llm-dot3'].forEach(id => {
-    document.getElementById(id).classList.remove('active-dot');
-  });
-}
+
+function llmThinkingOn()  { /* now handled per-step via setReasoningState */ }
+function llmThinkingOff() { /* now handled per-step via setReasoningState */ }
+
+/* ── Shared context snippets ────────────────────────────────────── */
+const CTX_HYDRATING =
+`${K('status')}: ${V('"hydrating…"')}
+${K('opportunity')}:
+  ${K('account')}: ${V('"Acme Global Corp"')}
+  ${K('amount')}:  ${N(250000)}
+  ${K('tier')}:    ${V('"Enterprise-1"')}
+${K('history')}:   ${C('// fetching…')}
+${K('requested')}: ${N(25)}${V('%')}
+${K('policy_limit')}: ${N(15)}${V('%')}`;
+
+const CTX_READY =
+`${K('opportunity')}:
+  ${K('account')}:   ${V('"Acme Global Corp"')}
+  ${K('amount')}:    ${N(250000)}
+  ${K('tier')}:      ${V('"Enterprise-1"')}
+  ${K('retention')}: ${N(98)}${V('%')}
+  ${K('margin')}:    ${N(62)}${V('%')}
+${K('history')}:
+  ${K('avg_disc')}:  ${N('11.4')}${V('%')}
+  ${K('max_disc')}:  ${N('22.0')}${V('%')}
+  ${K('deal_count')}: ${N(14)}
+${K('requested')}: ${N(25)}${V('%')}
+${K('policy_limit')}: ${N(15)}${V('%')}`;
+
+const OUT_PENDING =
+`${C('// awaiting LLM response…')}
+{
+  ${K('"approved"')}:   ${C('…')},
+  ${K('"confidence"')}: ${C('…')},
+  ${K('"justification"')}: ${C('…')},
+  ${K('"conditions"')}: ${C('…')}
+}`;
+
+const OUT_REASONING =
+`${C('// GPT-4o reasoning…')}
+{
+  ${K('"approved"')}:   ${B('true')},
+  ${K('"confidence"')}: ${N('0.91')},
+  ${K('"justification"')}: ${V('"Tier-1 customer,')}<br>    ${V('98% retention,')}<br>    ${V('precedent at 22%"')},
+  ${K('"conditions"')}: [
+    ${V('"VP sign-off required"')},
+    ${V('"1-year commit lock-in"')}
+  ]
+}`;
+
+const OUT_POLICY =
+`${C('// Claude policy cross-check')}
+${K('primary_decision')}:
+  ${K('approved')}:   ${B('true')}
+  ${K('confidence')}: ${N('0.91')}
+
+${K('policy_verdict')}:
+  ${K('status')}:  ${V('"PASS"')}
+  ${K('reason')}:  ${V('"Confidence ≥ 0.75,')}<br>          ${V('no secondary check needed"')}`;
+
+const OUT_SF_UPDATE =
+`${C('// Writing to Salesforce…')}
+${K('object')}: ${V('"Opportunity"')}
+${K('fields')}:
+  ${K('Approval_Status__c')}:
+    ${V('"Approved"')}
+  ${K('Approved_Discount__c')}:
+    ${N(25)}${V('%')}
+  ${K('Approval_Notes__c')}:
+    ${V('"Tier-1, strategic…"')}`;
+
+const OUT_COMPLETE =
+`${C('// ✅ Pipeline complete')}
+${K('status')}:   ${V('"Approved"')}
+${K('discount')}: ${N(25)}${V('%')}
+${K('notified')}: ${B('true')}
+${K('chatter')}:  ${B('true')}
+${K('elapsed')}:  ${N('"~2.4s"')}`;
 
 /* ── Manual step-through simulation ───────────────────────────── */
 const steps = [
@@ -984,26 +1056,48 @@ const steps = [
       nodeActive('n-a2a'); nodeActive('n-claude'); nodeActive('n-sfu');
       log('🔍 [MCP-Salesforce] Querying Opportunity + 36-month account discount history', 'proc');
       log('☁️  [A2A Agentforce] Checking exec availability & Slack threads', 'proc');
+      setReasoningState({
+        title: 'GPT-4o Reasoning Engine — Hydrating context…',
+        thinking: true,
+        leftHeading: 'Input Context',
+        left:  CTX_HYDRATING,
+        rightHeading: 'Decision Output',
+        right: OUT_PENDING,
+      });
     }
   },
   {
     label: 'Next: LLM reasoning →',
     next:  'Next: Policy cross-check →',
     fn: () => {
-      llmThinkingOn();
       log('🧠 [OpenAI GPT-4o] Reasoning: Acme Global is Tier-1, 98% retention, 62% net margin — exception justified', 'proc');
       log('🧠 [OpenAI GPT-4o] Confidence: 0.91 — discount approved with conditions', 'proc');
+      setReasoningState({
+        title: 'GPT-4o Reasoning Engine — Evaluating discount…',
+        thinking: true,
+        leftHeading: 'Input Context',
+        left:  CTX_READY,
+        rightHeading: 'Decision Output',
+        right: OUT_REASONING,
+      });
     }
   },
   {
     label: 'Next: Policy cross-check →',
     next:  'Next: Salesforce update →',
     fn: () => {
-      llmThinkingOff();
       log('🔮 [A2A Claude] Policy cross-check: confidence 0.91 — no secondary check required', 'info');
       nodeDone('n-sfq'); nodeDone('n-llm'); nodeDone('n-a2a'); nodeDone('n-claude');
       edgeDone('e-brok-sfq'); edgeDone('e-brok-llm'); edgeDone('e-brok-a2a'); edgeDone('e-brok-cla');
       edgeActive('e-sfq-brok'); edgeActive('e-llm-brok'); edgeActive('e-a2a-brok'); edgeActive('e-cla-brok');
+      setReasoningState({
+        title: 'GPT-4o Reasoning Engine — Policy cross-check complete',
+        thinking: false,
+        leftHeading: 'Input Context',
+        left:  CTX_READY,
+        rightHeading: 'Policy Verdict',
+        right: OUT_POLICY,
+      });
     }
   },
   {
@@ -1012,6 +1106,14 @@ const steps = [
     fn: () => {
       log('📝 [MCP-Salesforce] Updating Opportunity — Status → "Approved", logging LLM justification in Chatter', 'proc');
       nodeDone('n-sfu'); edgeDone('e-brok-sfu'); edgeActive('e-sfu-brok');
+      setReasoningState({
+        title: 'GPT-4o Reasoning Engine — Writing decision to Salesforce',
+        thinking: false,
+        leftHeading: 'Input Context',
+        left:  CTX_READY,
+        rightHeading: 'Salesforce Write',
+        right: OUT_SF_UPDATE,
+      });
     }
   },
   {
@@ -1022,6 +1124,14 @@ const steps = [
       nodeDone('n-broker');
       edgeActive('e-conv-eg'); nodeActive('n-egress');
       log('📤 Egress: formatting response payload, dispatching notification to sales rep', 'info');
+      setReasoningState({
+        title: 'GPT-4o Reasoning Engine — Dispatching response',
+        thinking: false,
+        leftHeading: 'Input Context',
+        left:  CTX_READY,
+        rightHeading: 'Salesforce Write',
+        right: OUT_SF_UPDATE,
+      });
     }
   },
   {
@@ -1032,6 +1142,14 @@ const steps = [
       nodeDone('n-egress'); nodeActive('n-sf-result');
       log('✅ Pipeline complete — Opportunity updated, sales rep notified via email + Salesforce Bell', 'ok');
       nodeDone('n-trigger');
+      setReasoningState({
+        title: '✅ GPT-4o Reasoning Engine — Pipeline complete',
+        thinking: false,
+        leftHeading: 'Input Context',
+        left:  CTX_READY,
+        rightHeading: 'Final Result',
+        right: OUT_COMPLETE,
+      });
     }
   },
   {
